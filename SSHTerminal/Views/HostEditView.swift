@@ -177,8 +177,12 @@ struct HostEditView: View {
     }
 }
 
-#Preview {
-    HostEditView(host: nil)
-        .environmentObject(HostManager())
-        .environmentObject(ThemeManager())
+#if DEBUG
+struct HostEditView_Previews: PreviewProvider {
+    static var previews: some View {
+        HostEditView(host: nil)
+            .environmentObject(HostManager())
+            .environmentObject(ThemeManager())
+    }
 }
+#endif

@@ -192,8 +192,12 @@ struct HostRowView: View {
     }
 }
 
-#Preview {
-    HostListView(activeTerminal: .constant(nil))
-        .environmentObject(HostManager())
-        .environmentObject(ThemeManager())
+#if DEBUG
+struct HostListView_Previews: PreviewProvider {
+    static var previews: some View {
+        HostListView(activeTerminal: .constant(nil))
+            .environmentObject(HostManager())
+            .environmentObject(ThemeManager())
+    }
 }
+#endif

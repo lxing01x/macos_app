@@ -26,7 +26,7 @@ class SSHService: ObservableObject {
         
         process.executableURL = URL(fileURLWithPath: "/usr/bin/ssh")
         
-        var arguments = [
+        let arguments = [
             "-o", "StrictHostKeyChecking=no",
             "-o", "UserKnownHostsFile=/dev/null",
             "-p", "\(host.port)",

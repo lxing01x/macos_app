@@ -10,7 +10,7 @@ struct SSHTerminalApp: App {
             ContentView()
                 .environmentObject(hostManager)
                 .environmentObject(themeManager)
-                .preferredColorScheme(themeManager.currentTheme == .dark ? .dark : .light)
+                .preferredColorScheme(themeManager.currentTheme == AppTheme.dark ? .dark : .light)
         }
         .windowStyle(HiddenTitleBarWindowStyle())
         .commands {
@@ -23,12 +23,12 @@ struct SSHTerminalApp: App {
             
             CommandMenu("Theme") {
                 Button("Light Mode") {
-                    themeManager.currentTheme = .light
+                    themeManager.currentTheme = AppTheme.light
                 }
                 .keyboardShortcut("1", modifiers: .command)
                 
                 Button("Dark Mode") {
-                    themeManager.currentTheme = .dark
+                    themeManager.currentTheme = AppTheme.dark
                 }
                 .keyboardShortcut("2", modifiers: .command)
                 

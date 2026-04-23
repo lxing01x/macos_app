@@ -67,15 +67,15 @@ struct ContentView: View {
                     
                     Menu("Theme") {
                         Button(action: {
-                            themeManager.currentTheme = .light
+                            themeManager.currentTheme = AppTheme.light
                         }) {
-                            Label("Light Mode", systemImage: themeManager.currentTheme == .light ? "checkmark" : "")
+                            Label("Light Mode", systemImage: themeManager.currentTheme == AppTheme.light ? "checkmark" : "")
                         }
                         
                         Button(action: {
-                            themeManager.currentTheme = .dark
+                            themeManager.currentTheme = AppTheme.dark
                         }) {
-                            Label("Dark Mode", systemImage: themeManager.currentTheme == .dark ? "checkmark" : "")
+                            Label("Dark Mode", systemImage: themeManager.currentTheme == AppTheme.dark ? "checkmark" : "")
                         }
                         
                         Button(action: {

@@ -155,8 +155,12 @@ struct WelcomeView: View {
     }
 }
 
-#Preview {
-    ContentView()
-        .environmentObject(HostManager())
-        .environmentObject(ThemeManager())
+#if DEBUG
+struct ContentView_Previews: PreviewProvider {
+    static var previews: some View {
+        ContentView()
+            .environmentObject(HostManager())
+            .environmentObject(ThemeManager())
+    }
 }
+#endif

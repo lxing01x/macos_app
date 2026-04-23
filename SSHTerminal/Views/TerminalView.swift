@@ -249,13 +249,17 @@ struct TerminalView: View {
     }
 }
 
-#Preview {
-    TerminalView(host: Host(
-        name: "Test Server",
-        address: "192.168.1.1",
-        port: 22,
-        username: "user",
-        password: "password"
-    ))
-    .environmentObject(ThemeManager())
+#if DEBUG
+struct TerminalView_Previews: PreviewProvider {
+    static var previews: some View {
+        TerminalView(host: Host(
+            name: "Test Server",
+            address: "192.168.1.1",
+            port: 22,
+            username: "user",
+            password: "password"
+        ))
+        .environmentObject(ThemeManager())
+    }
 }
+#endif

@@ -7,7 +7,7 @@ struct TerminalView: View {
     
     @State private var inputText = ""
     @State private var showConnectionOptions = false
-    @State private var connectionMethod: ConnectionMethod
+    @State private var connectionMethod: ConnectionMethod = .builtInTerminal
     @FocusState private var isInputFocused: Bool
     
     enum ConnectionMethod {

@@ -15,10 +15,11 @@ class SSHService: ObservableObject {
     func connect(to host: Host) {
         disconnect()
         
-        output = "[Connecting to \(host.username)@\(host.address):\(host.port)]\n"
-        
         if !host.password.isEmpty {
-            output += "[Notice: Built-in terminal may have issues with password authentication. If connection fails, please use 'Open in System Terminal'.]\n"
+            output = "[Notice: Built-in terminal may not support password authentication. Please use 'Open in System Terminal' for password-based connections, or use SSH key authentication.]\n"
+            output += "[Connecting to \(host.username)@\(host.address):\(host.port)]\n"
+        } else {
+            output = "[Connecting to \(host.username)@\(host.address):\(host.port)]\n"
         }
         
         let process = Process()
@@ -39,33 +40,20 @@ class SSHService: ObservableObject {
                 .replacingOccurrences(of: "]", with: "\\]")
                 .replacingOccurrences(of: "\"", with: "\\\"")
                 .replacingOccurrences(of: "$", with: "\\$")
-                .replacingOccurrences(of: "`", with: "\\`")
             
             let expectScript = """
-            set timeout 30
+            set timeout -1
             spawn ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p \(host.port) \(host.username)@\(host.address)
             expect {
-                -re "assword:" {
+                "assword:" {
                     send "\(escapedPassword)\\r"
                     exp_continue
                 }
-                -re "yes/no" {
+                "yes/no" {
                     send "yes\\r"
                     exp_continue
                 }
-                -re "Permission denied" {
-                    puts "Permission denied - Please check your password or use System Terminal."
-                    exit 1
-                }
-                -re "\\$|#|%|>" {
-                    puts "Connected successfully!"
-                }
-                timeout {
-                    puts "Connection timed out."
-                    exit 1
-                }
                 eof {
-                    puts "Connection closed."
                     exit
                 }
             }
@@ -120,6 +108,12 @@ class SSHService: ObservableObject {
         do {
             try process.run()
             isConnected = true
+            
+            if host.password.isEmpty {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+                    self?.sendInput("\n")
+                }
+            }
         } catch {
             errorMessage = "Failed to start SSH: \(error.localizedDescription)"
             output = "[Error: \(error.localizedDescription)]\n"
@@ -127,58 +121,45 @@ class SSHService: ObservableObject {
     }
     
     func connectInTerminal(to host: Host) {
-        let sshCommand = "ssh -o StrictHostKeyChecking=no -p \(host.port) \(host.username)@\(host.address)"
+        let script = """
+        tell application "Terminal"
+            launch
+            activate
+            delay 0.2
+            do script "ssh -o StrictHostKeyChecking=no -p \(host.port) \(host.username)@\(host.address)"
+        end tell
+        """
         
         DispatchQueue.global(qos: .userInitiated).async {
-            let workspace = NSWorkspace.shared
-            
-            if !workspace.launchApplication("Terminal") {
-                let terminalURL = URL(fileURLWithPath: "/System/Applications/Utilities/Terminal.app")
-                try? workspace.open(terminalURL)
-            }
-            
-            Thread.sleep(forTimeInterval: 0.5)
-            
-            let script = """
-            tell application "Terminal"
-                activate
-                do script "\(sshCommand)"
-            end tell
-            """
-            
-            var error: NSDictionary?
             if let appleScript = NSAppleScript(source: script) {
+                var error: NSDictionary?
                 appleScript.executeAndReturnError(&error)
                 
                 if let error = error {
                     print("AppleScript error: \(error)")
-                    
                     let fallbackScript = """
-                    do shell script "open -a Terminal.app"
-                    delay 1
+                    tell application "System Events"
+                        set terminalIsRunning to (name of processes) contains "Terminal"
+                    end tell
+                    
+                    if terminalIsRunning is false then
+                        tell application "Terminal"
+                            launch
+                            activate
+                        end tell
+                        delay 0.5
+                    end if
+                    
                     tell application "Terminal"
                         activate
-                        do script "\(sshCommand)"
+                        do script "ssh -o StrictHostKeyChecking=no -p \(host.port) \(host.username)@\(host.address)"
                     end tell
                     """
-                    
-                    var fallbackError: NSDictionary?
                     if let fallbackAppleScript = NSAppleScript(source: fallbackScript) {
+                        var fallbackError: NSDictionary?
                         fallbackAppleScript.executeAndReturnError(&fallbackError)
                         if let fallbackError = fallbackError {
                             print("Fallback AppleScript error: \(fallbackError)")
-                            
-                            let shellScript = "osascript -e 'tell application \"Terminal\" to activate' -e 'tell application \"Terminal\" to do script \"\(sshCommand)\"'"
-                            
-                            let task = Process()
-                            task.launchPath = "/bin/bash"
-                            task.arguments = ["-c", shellScript]
-                            
-                            do {
-                                try task.run()
-                            } catch {
-                                print("Shell script error: \(error)")
-                            }
                         }
                     }
                 }

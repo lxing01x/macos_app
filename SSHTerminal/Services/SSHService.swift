@@ -127,61 +127,19 @@ class SSHService: ObservableObject {
     }
     
     func connectInTerminal(to host: Host) {
-        let sshCommand = "ssh -o StrictHostKeyChecking=no -p \(host.port) \(host.username)@\(host.address)"
+        let script = """
+        tell application "Terminal"
+            activate
+            do script "ssh -o StrictHostKeyChecking=no -p \(host.port) \(host.username)@\(host.address)"
+        end tell
+        """
         
-        DispatchQueue.global(qos: .userInitiated).async {
-            let workspace = NSWorkspace.shared
-            
-            if !workspace.launchApplication("Terminal") {
-                let terminalURL = URL(fileURLWithPath: "/System/Applications/Utilities/Terminal.app")
-                try? workspace.open(terminalURL)
-            }
-            
-            Thread.sleep(forTimeInterval: 0.5)
-            
-            let script = """
-            tell application "Terminal"
-                activate
-                do script "\(sshCommand)"
-            end tell
-            """
-            
+        if let appleScript = NSAppleScript(source: script) {
             var error: NSDictionary?
-            if let appleScript = NSAppleScript(source: script) {
-                appleScript.executeAndReturnError(&error)
-                
-                if let error = error {
-                    print("AppleScript error: \(error)")
-                    
-                    let fallbackScript = """
-                    do shell script "open -a Terminal.app"
-                    delay 1
-                    tell application "Terminal"
-                        activate
-                        do script "\(sshCommand)"
-                    end tell
-                    """
-                    
-                    var fallbackError: NSDictionary?
-                    if let fallbackAppleScript = NSAppleScript(source: fallbackScript) {
-                        fallbackAppleScript.executeAndReturnError(&fallbackError)
-                        if let fallbackError = fallbackError {
-                            print("Fallback AppleScript error: \(fallbackError)")
-                            
-                            let shellScript = "osascript -e 'tell application \"Terminal\" to activate' -e 'tell application \"Terminal\" to do script \"\(sshCommand)\"'"
-                            
-                            let task = Process()
-                            task.launchPath = "/bin/bash"
-                            task.arguments = ["-c", shellScript]
-                            
-                            do {
-                                try task.run()
-                            } catch {
-                                print("Shell script error: \(error)")
-                            }
-                        }
-                    }
-                }
+            appleScript.executeAndReturnError(&error)
+            
+            if let error = error {
+                print("AppleScript error: \(error)")
             }
         }
     }

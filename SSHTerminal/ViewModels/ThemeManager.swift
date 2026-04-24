@@ -20,16 +20,16 @@ class ThemeManager: ObservableObject {
            let theme = AppTheme(rawValue: savedTheme) {
             currentTheme = theme
         } else {
-            currentTheme = .dark
+            currentTheme = AppTheme.dark
         }
     }
     
     func toggleTheme() {
-        currentTheme = currentTheme == .light ? .dark : .light
+        currentTheme = currentTheme == AppTheme.light ? AppTheme.dark : AppTheme.light
     }
     
     var isDarkMode: Bool {
-        return currentTheme == .dark
+        return currentTheme == AppTheme.dark
     }
     
     var backgroundColor: Color {

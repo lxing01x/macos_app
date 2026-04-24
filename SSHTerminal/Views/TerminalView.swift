@@ -7,12 +7,21 @@ struct TerminalView: View {
     
     @State private var inputText = ""
     @State private var showConnectionOptions = false
-    @State private var connectionMethod: ConnectionMethod = .builtInTerminal
+    @State private var connectionMethod: ConnectionMethod
     @FocusState private var isInputFocused: Bool
     
     enum ConnectionMethod {
         case systemTerminal
         case builtInTerminal
+    }
+    
+    init(host: Host) {
+        self.host = host
+        if host.password.isEmpty {
+            _connectionMethod = State(initialValue: .builtInTerminal)
+        } else {
+            _connectionMethod = State(initialValue: .systemTerminal)
+        }
     }
     
     var body: some View {
@@ -122,10 +131,21 @@ struct TerminalView: View {
                 .foregroundColor(themeManager.accentColor)
             
             VStack(spacing: 10) {
-                Text("Connecting to System Terminal")
-                    .font(.title)
-                    .fontWeight(.bold)
-                    .foregroundColor(themeManager.textColor)
+                if !host.password.isEmpty {
+                    Text("Recommended: Use System Terminal")
+                        .font(.title)
+                        .fontWeight(.bold)
+                        .foregroundColor(themeManager.textColor)
+                    
+                    Text("Password authentication works best with System Terminal")
+                        .font(.title3)
+                        .foregroundColor(themeManager.secondaryTextColor)
+                } else {
+                    Text("Open in System Terminal")
+                        .font(.title)
+                        .fontWeight(.bold)
+                        .foregroundColor(themeManager.textColor)
+                }
                 
                 Text("\(host.username)@\(host.address):\(host.port)")
                     .font(.title3)
@@ -167,11 +187,19 @@ struct TerminalView: View {
                 .buttonStyle(PlainButtonStyle())
             }
             
-            Text("Tip: System Terminal provides full SSH functionality including password prompts and key authentication.")
-                .font(.caption)
-                .foregroundColor(themeManager.secondaryTextColor)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 40)
+            if !host.password.isEmpty {
+                Text("Tip: System Terminal provides full SSH functionality including interactive password prompts. Built-in terminal may have issues with password authentication.")
+                    .font(.caption)
+                    .foregroundColor(themeManager.secondaryTextColor)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 40)
+            } else {
+                Text("Tip: Both methods work well for SSH key authentication.")
+                    .font(.caption)
+                    .foregroundColor(themeManager.secondaryTextColor)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 40)
+            }
             
             Spacer()
         }

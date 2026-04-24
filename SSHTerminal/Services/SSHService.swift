@@ -15,6 +15,13 @@ class SSHService: ObservableObject {
     func connect(to host: Host) {
         disconnect()
         
+        if !host.password.isEmpty {
+            output = "[Notice: Built-in terminal may not support password authentication. Please use 'Open in System Terminal' for password-based connections, or use SSH key authentication.]\n"
+            output += "[Connecting to \(host.username)@\(host.address):\(host.port)]\n"
+        } else {
+            output = "[Connecting to \(host.username)@\(host.address):\(host.port)]\n"
+        }
+        
         let process = Process()
         let inputPipe = Pipe()
         let outputPipe = Pipe()
@@ -24,16 +31,48 @@ class SSHService: ObservableObject {
         process.standardOutput = outputPipe
         process.standardError = errorPipe
         
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/ssh")
-        
-        let arguments = [
-            "-o", "StrictHostKeyChecking=no",
-            "-o", "UserKnownHostsFile=/dev/null",
-            "-p", "\(host.port)",
-            "\(host.username)@\(host.address)"
-        ]
-        
-        process.arguments = arguments
+        if !host.password.isEmpty {
+            process.executableURL = URL(fileURLWithPath: "/usr/bin/expect")
+            
+            let escapedPassword = host.password
+                .replacingOccurrences(of: "\\", with: "\\\\")
+                .replacingOccurrences(of: "[", with: "\\[")
+                .replacingOccurrences(of: "]", with: "\\]")
+                .replacingOccurrences(of: "\"", with: "\\\"")
+                .replacingOccurrences(of: "$", with: "\\$")
+            
+            let expectScript = """
+            set timeout -1
+            spawn ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p \(host.port) \(host.username)@\(host.address)
+            expect {
+                "assword:" {
+                    send "\(escapedPassword)\\r"
+                    exp_continue
+                }
+                "yes/no" {
+                    send "yes\\r"
+                    exp_continue
+                }
+                eof {
+                    exit
+                }
+            }
+            interact
+            """
+            
+            process.arguments = ["-c", expectScript]
+        } else {
+            process.executableURL = URL(fileURLWithPath: "/usr/bin/ssh")
+            
+            let arguments = [
+                "-o", "StrictHostKeyChecking=no",
+                "-o", "UserKnownHostsFile=/dev/null",
+                "-p", "\(host.port)",
+                "\(host.username)@\(host.address)"
+            ]
+            
+            process.arguments = arguments
+        }
         
         self.process = process
         self.inputPipe = inputPipe
@@ -69,11 +108,10 @@ class SSHService: ObservableObject {
         do {
             try process.run()
             isConnected = true
-            output = "[Connecting to \(host.username)@\(host.address):\(host.port)]\n"
             
-            if !host.password.isEmpty {
+            if host.password.isEmpty {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
-                    self?.sendInput(host.password + "\n")
+                    self?.sendInput("\n")
                 }
             }
         } catch {
@@ -83,23 +121,14 @@ class SSHService: ObservableObject {
     }
     
     func connectInTerminal(to host: Host) {
-        let script: String
-        
-        if !host.password.isEmpty {
-            script = """
-            tell application "Terminal"
-                activate
-                do script "expect -c 'spawn ssh -o StrictHostKeyChecking=no -p \(host.port) \(host.username)@\(host.address); expect \"password:\"; send \"\(host.password)\\r\"; interact'"
-            end tell
-            """
-        } else {
-            script = """
-            tell application "Terminal"
-                activate
-                do script "ssh -o StrictHostKeyChecking=no -p \(host.port) \(host.username)@\(host.address)"
-            end tell
-            """
-        }
+        let script = """
+        tell application "Terminal"
+            launch
+            activate
+            delay 0.2
+            do script "ssh -o StrictHostKeyChecking=no -p \(host.port) \(host.username)@\(host.address)"
+        end tell
+        """
         
         if let appleScript = NSAppleScript(source: script) {
             var error: NSDictionary?
@@ -108,13 +137,29 @@ class SSHService: ObservableObject {
             if let error = error {
                 print("AppleScript error: \(error)")
                 let fallbackScript = """
+                tell application "System Events"
+                    set terminalIsRunning to (name of processes) contains "Terminal"
+                end tell
+                
+                if terminalIsRunning is false then
+                    tell application "Terminal"
+                        launch
+                        activate
+                    end tell
+                    delay 0.5
+                end if
+                
                 tell application "Terminal"
                     activate
                     do script "ssh -o StrictHostKeyChecking=no -p \(host.port) \(host.username)@\(host.address)"
                 end tell
                 """
                 if let fallbackAppleScript = NSAppleScript(source: fallbackScript) {
-                    fallbackAppleScript.executeAndReturnError(nil)
+                    var fallbackError: NSDictionary?
+                    fallbackAppleScript.executeAndReturnError(&fallbackError)
+                    if let fallbackError = fallbackError {
+                        print("Fallback AppleScript error: \(fallbackError)")
+                    }
                 }
             }
         }

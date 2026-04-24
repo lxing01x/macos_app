@@ -7,7 +7,7 @@ struct TerminalView: View {
     
     @State private var inputText = ""
     @State private var showConnectionOptions = false
-    @State private var connectionMethod: ConnectionMethod = .systemTerminal
+    @State private var connectionMethod: ConnectionMethod = .builtInTerminal
     @FocusState private var isInputFocused: Bool
     
     enum ConnectionMethod {
@@ -235,8 +235,6 @@ struct TerminalView: View {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                 isInputFocused = true
             }
-        } else {
-            sshService.connectInTerminal(to: host)
         }
     }
     

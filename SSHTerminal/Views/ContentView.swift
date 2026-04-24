@@ -3,7 +3,6 @@ import SwiftUI
 struct ContentView: View {
     @EnvironmentObject var hostManager: HostManager
     @EnvironmentObject var themeManager: ThemeManager
-    @State private var isSidebarVisible = true
     @State private var activeTerminal: Host?
     
     var body: some View {
@@ -31,14 +30,6 @@ struct ContentView: View {
         }
         .background(themeManager.backgroundColor)
         .toolbar {
-            ToolbarItem(placement: .navigation) {
-                Button(action: {
-                    isSidebarVisible.toggle()
-                }) {
-                    Image(systemName: "sidebar.leading")
-                }
-            }
-            
             ToolbarItem(placement: .primaryAction) {
                 Menu {
                     Button(action: {

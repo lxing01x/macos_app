@@ -30,7 +30,15 @@ let package = Package(
                 "Views/TerminalView.swift",
                 "Services/SSHService.swift"
             ],
-            resources: []
+            resources: [],
+            linkerSettings: [
+                .unsafeFlags([
+                    "-Xlinker", "-sectcreate",
+                    "-Xlinker", "__TEXT",
+                    "-Xlinker", "__entitlements",
+                    "-Xlinker", "SSHTerminal/SSHTerminal.entitlements"
+                ])
+            ]
         )
     ]
 )

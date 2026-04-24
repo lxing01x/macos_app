@@ -83,23 +83,12 @@ class SSHService: ObservableObject {
     }
     
     func connectInTerminal(to host: Host) {
-        let script: String
-        
-        if !host.password.isEmpty {
-            script = """
-            tell application "Terminal"
-                activate
-                do script "expect -c 'spawn ssh -o StrictHostKeyChecking=no -p \(host.port) \(host.username)@\(host.address); expect \"password:\"; send \"\(host.password)\\r\"; interact'"
-            end tell
-            """
-        } else {
-            script = """
-            tell application "Terminal"
-                activate
-                do script "ssh -o StrictHostKeyChecking=no -p \(host.port) \(host.username)@\(host.address)"
-            end tell
-            """
-        }
+        let script = """
+        tell application "Terminal"
+            activate
+            do script "ssh -o StrictHostKeyChecking=no -p \(host.port) \(host.username)@\(host.address)"
+        end tell
+        """
         
         if let appleScript = NSAppleScript(source: script) {
             var error: NSDictionary?
@@ -107,15 +96,6 @@ class SSHService: ObservableObject {
             
             if let error = error {
                 print("AppleScript error: \(error)")
-                let fallbackScript = """
-                tell application "Terminal"
-                    activate
-                    do script "ssh -o StrictHostKeyChecking=no -p \(host.port) \(host.username)@\(host.address)"
-                end tell
-                """
-                if let fallbackAppleScript = NSAppleScript(source: fallbackScript) {
-                    fallbackAppleScript.executeAndReturnError(nil)
-                }
             }
         }
     }
